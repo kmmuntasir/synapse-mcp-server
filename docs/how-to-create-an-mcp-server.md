@@ -158,6 +158,18 @@ If the team prefers a **zero-install centralized server**, the AI should impleme
 
 -   **Tool Use:** MCP enables "Function Calling" natively across different editors (Cursor, Roo Code, Claude Desktop) with a single implementation.
 
+
+### Test with the Inspector
+
+The best way to see if your tool is working is to use the official debugger:
+
+
+```bash
+npx @modelcontextprotocol/inspector npx tsx index.ts
+```
+
+This will open a web interface where you can click "List Tools" and actually run your search-my-dataset tool to see the results.
+
 * * * * *
 
 **Next Step for the AI Agent:**
