@@ -5,9 +5,9 @@ Enable Synapse-MCP to access files from GitHub repositories (public and private)
 
 ## User Review Required
 > [!IMPORTANT]
-- **Authentication**: Private repositories require a `GITHUB_TOKEN` environment variable.
-- **Rate Limits**: Unauthenticated GitHub access is severely rate-limited. It is highly recommended to provide a token even for public repos.
-- **Mounting Strategy**: To avoid naming collisions between local files and GitHub repositories, GitHub repositories will be mounted under a virtual directory structure: `github/{owner}/{repo}/`. Local files will remain at the root `/` (serving as the default).
+> - **Authentication**: A `GITHUB_TOKEN` is **MANDATORY** for all GitHub integrations, including public repositories. This ensures better rate limits and access to private repos.
+> - **Throttling**: To stay within GitHub's Search API limits (30 req/min), the server will implement internal queuing and wait logic. If the limit is reached, tools will wait and retry automatically before returning.
+> - **Mounting Strategy**: GitHub repositories will be mounted under `github/{owner}/{repo}/`. Local files remain at the root `/`.
 
 ## Proposed Changes
 
@@ -19,6 +19,7 @@ Enable Synapse-MCP to access files from GitHub repositories (public and private)
 #### [NEW] [GitHubProvider.ts](file:///d:/localhost/synapse-mcp-server/src/providers/GitHubProvider.ts)
 - Implements `KBProvider`.
 - **Constructor**: Accepts `owner`, `repo`, and authenticated `Octokit` instance.
+- **Internal Throttler**: Uses a central rate-limiter check before executing `search` or `list` operations.
 - **`list(path)`**:
     - Maps to `octokit.rest.repos.getContent`.
     - Returns `FileSystemEntry[]`.
@@ -28,6 +29,7 @@ Enable Synapse-MCP to access files from GitHub repositories (public and private)
 - **`search(query)`**:
     - Maps to `octokit.rest.search.code`.
     - Query format: `{query} repo:{owner}/{repo}`.
+    - **Note**: This is the primary subject of throttling since the Search API has stricter limits than the Core API.
 
 #### [NEW] [AggregatorProvider.ts](file:///d:/localhost/synapse-mcp-server/src/providers/AggregatorProvider.ts)
 - Implements `KBProvider`.
@@ -45,12 +47,11 @@ Enable Synapse-MCP to access files from GitHub repositories (public and private)
 
 #### [MODIFY] [index.ts](file:///d:/localhost/synapse-mcp-server/src/index.ts)
 - Import `Octokit`.
-- Parse `GITHUB_TOKEN` and `GITHUB_REPOS` (comma-separated `owner/repo`) from environment.
+- Validation: If `GITHUB_REPOS` is provided, ensure `GITHUB_TOKEN` is present; otherwise, exit with a clear error message.
+- Parse `GITHUB_REPOS` (comma-separated `owner/repo`) from environment.
 - Instantiate `GitHubProvider` for each repo.
 - Instantiate `AggregatorProvider`.
-    - Mount `LocalFileSystemProvider` at root `/`.
-    - Mount each `GitHubProvider` at `github/{owner}/{repo}`.
-- Update `provider` instance to be the `AggregatorProvider`.
+- Print a warning log on startup about the 30 req/min GitHub Search limit.
 
 ## Verification Plan
 
