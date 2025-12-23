@@ -12,10 +12,13 @@ const server = new McpServer({
 });
 
 // Initialize provider
-const notesRoot = process.argv[2] || process.env.NOTES_ROOT || process.cwd();
-const provider = new LocalFileSystemProvider(notesRoot);
+const cliRoots = process.argv.slice(2);
+const envRoots = process.env.NOTES_ROOT ? process.env.NOTES_ROOT.split(path.delimiter) : [];
+const notesRoots = cliRoots.length > 0 ? cliRoots : (envRoots.length > 0 ? envRoots : [process.cwd()]);
 
-console.error(`Synapse-MCP starting with root: ${notesRoot}`);
+const provider = new LocalFileSystemProvider(notesRoots);
+
+console.error(`Synapse-MCP starting with roots: ${notesRoots.join(', ')}`);
 
 // 1. Tool: list_directory
 server.tool(

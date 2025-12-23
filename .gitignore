@@ -1,3 +1,7 @@
+# Editor Files
+.idea
+.vscode
+
 # Logs
 logs
 *.log
