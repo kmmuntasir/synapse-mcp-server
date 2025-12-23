@@ -34,5 +34,9 @@
     "@modelcontextprotocol/sdk": "^1.25.1",
     "dotenv": "^17.2.3",
     "zod": "^4.2.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^22.0.0"
   }
 }
