@@ -1,6 +1,7 @@
 ---
-trigger: always_on
+trigger: glob
 description: A Description
+globs: *.js, *.ts
 ---
 
 # Code Style Guide
