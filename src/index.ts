@@ -3,22 +3,55 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { LocalFileSystemProvider } from './providers/LocalFileSystemProvider.js';
+import { GitHubProvider } from './providers/GitHubProvider.js';
+import { AggregatorProvider } from './providers/AggregatorProvider.js';
 import path from 'path';
 import 'dotenv/config';
 
 const server = new McpServer({
     name: 'synapse-mcp-server',
-    version: '0.1.0',
+    version: '0.1.2',
 });
 
-// Initialize provider
+// Initialize providers
 const cliRoots = process.argv.slice(2);
 const envRoots = process.env.NOTES_ROOT ? process.env.NOTES_ROOT.split(path.delimiter) : [];
 const notesRoots = cliRoots.length > 0 ? cliRoots : (envRoots.length > 0 ? envRoots : [process.cwd()]);
 
-const provider = new LocalFileSystemProvider(notesRoots);
+const localProvider = new LocalFileSystemProvider(notesRoots);
+const aggregator = new AggregatorProvider(localProvider);
 
-console.error(`Synapse-MCP starting with roots: ${notesRoots.join(', ')}`);
+// GitHub Integration
+const githubToken = process.env.GITHUB_TOKEN;
+const githubRepos = process.env.GITHUB_REPOS ? process.env.GITHUB_REPOS.split(',').map(r => r.trim()) : [];
+
+if (githubRepos.length > 0) {
+    if (!githubToken) {
+        console.error('Error: GITHUB_REPOS configured but GITHUB_TOKEN is missing. GitHub integration disabled.');
+        process.exit(1);
+    }
+
+    console.error('GitHub Integration active for repositories:');
+    for (const repoStr of githubRepos) {
+        const parts = repoStr.split('/');
+        if (parts.length >= 2) {
+            const owner = parts[0];
+            const repo = parts[1];
+            const basePath = parts.slice(2).join('/');
+
+            const mountPath = `github/${owner}/${repo}${basePath ? '/' + basePath : ''}`;
+            console.error(`  - ${owner}/${repo}${basePath ? ' (path: ' + basePath + ')' : ''} (mounted at ${mountPath})`);
+
+            const ghProvider = new GitHubProvider(owner, repo, githubToken, basePath);
+            aggregator.mount(mountPath, ghProvider);
+        }
+    }
+    console.error('WARNING: GitHub Search API is limited to 30 requests per minute. Internal throttling is active.');
+}
+
+const provider = aggregator;
+
+console.error(`Synapse-MCP starting with local roots: ${notesRoots.join(', ')}`);
 
 // 1. Tool: list_directory
 server.tool(

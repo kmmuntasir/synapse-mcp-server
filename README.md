@@ -13,6 +13,18 @@ When providing multiple directories, use the appropriate separator for your OS:
 
 ---
 
+### GitHub Integration (Remote)
+You can also mount GitHub repositories as part of your knowledge base.
+
+- **`GITHUB_TOKEN`**: (Mandatory) A Personal Access Token (classic or fine-grained) with `repo` scope.
+- **`GITHUB_REPOS`**: A comma-separated list of `owner/repo` or `owner/repo/path/to/subdir`.
+    - To search/access an entire repository: `owner/repo`
+    - To restrict access to a specific folder: `owner/repo/docs`
+
+**Note**: GitHub repositories are mounted under a virtual `github/` directory (e.g., `github/owner/repo/docs`). You can mount either a whole repository or a specific subdirectory to restrict the AI agent's access to only relevant context. The GitHub Search API is limited to 30 requests per minute; Synapse-MCP handles this internally with automatic throttling.
+
+---
+
 ### 1. Cursor
 1. Go to **Settings** > **General** > **MCP**.
 2. Click **+ Add New MCP Server**.
@@ -20,7 +32,7 @@ When providing multiple directories, use the appropriate separator for your OS:
    - **Name**: `synapse-mcp`
    - **Type**: `command`
    - **Command**: `npx -y @kmmuntasir/synapse-mcp-server`
-   - **Environment Variables**: `NOTES_ROOT=/home/user/notes`
+   - **Environment Variables**: `NOTES_ROOT=...`, `GITHUB_TOKEN=your_token`, `GITHUB_REPOS=owner/repo/docs`
 
 ### 2. Roo Code (VS Code)
 Add this to your `cline_mcp_settings.json`:
@@ -30,7 +42,9 @@ Add this to your `cline_mcp_settings.json`:
     "command": "npx",
     "args": ["-y", "@kmmuntasir/synapse-mcp-server"],
     "env": {
-      "NOTES_ROOT": "/home/user/notes1:/home/user/notes2"
+      "NOTES_ROOT": "/home/user/notes1:/home/user/notes2",
+      "GITHUB_TOKEN": "your_token",
+      "GITHUB_REPOS": "owner/repo/docs"
     }
   }
 }
@@ -41,12 +55,12 @@ Add this to your `cline_mcp_settings.json`:
 2. Add a new server:
    - **Command**: `npx`
    - **Arguments**: `-y`, `@kmmuntasir/synapse-mcp-server`
-   - **Env Variables**: `NOTES_ROOT=/home/user/notes`
+   - **Env Variables**: `NOTES_ROOT=...`, `GITHUB_TOKEN=...`, `GITHUB_REPOS=...`
 
 ### 4. Claude Code (CLI)
 Run the following command to add the server:
 ```bash
-claude mcp add npx -y @kmmuntasir/synapse-mcp-server --env NOTES_ROOT="/home/user/notes"
+claude mcp add npx -y @kmmuntasir/synapse-mcp-server --env NOTES_ROOT="..." --env GITHUB_TOKEN="..." --env GITHUB_REPOS="owner/repo/docs"
 ```
 
 ### 5. Gemini CLI
@@ -57,7 +71,9 @@ Add the following to your MCP configuration file (usually `~/.config/gemini-mcp/
     "command": "npx",
     "args": ["-y", "@kmmuntasir/synapse-mcp-server"],
     "env": {
-      "NOTES_ROOT": "/home/user/notes"
+      "NOTES_ROOT": "/home/user/notes",
+      "GITHUB_TOKEN": "your_token",
+      "GITHUB_REPOS": "owner/repo/docs"
     }
   }
 }
