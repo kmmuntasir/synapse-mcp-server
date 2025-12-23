@@ -103,7 +103,7 @@ synapse-mcp-server/
 *   Ensure the main server logic (`index.ts`) is agnostic of the underlying provider.
 
 ### Phase 3: Remote Integration
-*   Implement `DropboxProvider` using Dropbox SDK.
+*   Implement `DropboxProvider` using Dropbox SDK. (maybe Google Drive and Github, too)
 *   Add configuration handling (Access Tokens via `.env`).
 *   Add ability to select or combine providers.
 
