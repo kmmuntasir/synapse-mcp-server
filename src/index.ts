@@ -12,7 +12,7 @@ const server = new McpServer({
 });
 
 // Initialize provider
-const notesRoot = process.env.NOTES_ROOT || process.cwd();
+const notesRoot = process.argv[2] || process.env.NOTES_ROOT || process.cwd();
 const provider = new LocalFileSystemProvider(notesRoot);
 
 console.error(`Synapse-MCP starting with root: ${notesRoot}`);
