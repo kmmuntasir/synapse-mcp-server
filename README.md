@@ -2,50 +2,68 @@
 
 **Synapse-MCP** is a "Hybrid Universal Knowledge Base" server for AI agents. It provides a unified interface to search and retrieve information from multiple local directories (e.g., Obsidian vaults or Markdown folders).
 
-## Quick Start (Npx)
+## Configuration
 
-Run Synapse-MCP directly using `npx` in your favorite AI tool (Cursor, Roo Code, etc.). 
+Synapse-MCP is run directly via `npx`. Configuration is strictly handled via the `NOTES_ROOT` environment variable.
 
-### 1. Configuration in Cursor
-1. Go to **Cursor Settings** > **General** > **MCP**.
+### Note on Path Separators
+When providing multiple directories, use the appropriate separator for your OS:
+- **Windows**: Semicolon (`;`) → `C:/path1;D:/path2`
+- **Linux/macOS**: Colon (`:`) → `/home/user/path1:/home/user/path2`
+
+---
+
+### 1. Cursor
+1. Go to **Settings** > **General** > **MCP**.
 2. Click **+ Add New MCP Server**.
-3. Configure it:
+3. Set the following:
    - **Name**: `synapse-mcp`
    - **Type**: `command`
-   - **Command**: `npx -y @kmmuntasir/synapse-mcp-server "C:/path/to/notes"`
+   - **Command**: `npx -y @kmmuntasir/synapse-mcp-server`
+   - **Environment Variables**: `NOTES_ROOT=/home/user/notes`
 
-### 2. Configuration in Roo Code
+### 2. Roo Code (VS Code)
 Add this to your `cline_mcp_settings.json`:
 ```json
 "mcpServers": {
   "synapse-mcp": {
     "command": "npx",
-    "args": [
-      "-y",
-      "@kmmuntasir/synapse-mcp-server",
-      "C:/notes1",
-      "D:/notes2"
-    ]
+    "args": ["-y", "@kmmuntasir/synapse-mcp-server"],
+    "env": {
+      "NOTES_ROOT": "/home/user/notes1:/home/user/notes2"
+    }
   }
 }
 ```
 
-### 3. Using Environment Variables
-You can also set the notes paths via the `NOTES_ROOT` environment variable. 
+### 3. Kilo Code
+1. Open **Kilo Settings** > **MCP Configuration**.
+2. Add a new server:
+   - **Command**: `npx`
+   - **Arguments**: `-y`, `@kmmuntasir/synapse-mcp-server`
+   - **Env Variables**: `NOTES_ROOT=/home/user/notes`
 
-**Note on Path Separators:**
-- **Windows**: Use a semicolon (`;`) to separate multiple paths (e.g., `C:/notes1;D:/notes2`).
-- **Linux/macOS**: Use a colon (`:`) to separate multiple paths (e.g., `/home/user/notes1:/home/user/notes2`).
+### 4. Claude Code (CLI)
+Run the following command to add the server:
+```bash
+claude mcp add npx -y @kmmuntasir/synapse-mcp-server --env NOTES_ROOT="/home/user/notes"
+```
 
+### 5. Gemini CLI
+Add the following to your MCP configuration file (usually `~/.config/gemini-mcp/config.json`):
 ```json
-"synapse-mcp": {
-  "command": "npx",
-  "args": ["-y", "@kmmuntasir/synapse-mcp-server"],
-  "env": {
-    "NOTES_ROOT": "C:/notes1;D:/notes2"
+"mcpServers": {
+  "synapse-mcp": {
+    "command": "npx",
+    "args": ["-y", "@kmmuntasir/synapse-mcp-server"],
+    "env": {
+      "NOTES_ROOT": "/home/user/notes"
+    }
   }
 }
 ```
+
+---
 
 ## Tools Available
 - `list_directory`: Recursively list files to map the knowledge base.
@@ -54,6 +72,7 @@ You can also set the notes paths via the `NOTES_ROOT` environment variable.
 
 ## Resources
 - [GitHub Repository](https://github.com/kmmuntasir/synapse-mcp-server)
+- [Development & Source Installation](https://github.com/kmmuntasir/synapse-mcp-server/blob/main/docs/development.md)
 
 ## License
 GPL 3.0
