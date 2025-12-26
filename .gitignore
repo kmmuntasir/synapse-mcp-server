@@ -1,6 +1,7 @@
 # Editor Files
 .idea
 .vscode
+.kilocode
 
 # Logs
 logs

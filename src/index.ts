@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { LocalFileSystemProvider } from './providers/LocalFileSystemProvider.js';
 import { GitHubProvider } from './providers/GitHubProvider.js';
 import { AggregatorProvider } from './providers/AggregatorProvider.js';
+import { MAX_MCP_RESPONSE_SIZE } from './config/constants.js';
 import path from 'path';
 import 'dotenv/config';
 import { readFileSync } from 'fs';
@@ -12,6 +13,18 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+/**
+ * Validates that the response content size does not exceed MCP transport limits
+ */
+function validateResponseSize(content: string, maxSize: number = MAX_MCP_RESPONSE_SIZE): void {
+    const size = Buffer.byteLength(content, 'utf8');
+    if (size > maxSize) {
+        throw new Error(
+            `Response size (${(size / 1024 / 1024).toFixed(2)}MB) exceeds MCP transport limit of ${maxSize / 1024 / 1024}MB`
+        );
+    }
+}
 
 const versionPath = path.join(__dirname, '..', 'VERSION');
 let version = 'unknown';
@@ -96,7 +109,7 @@ server.tool(
 // 2. Tool: search_notes
 server.tool(
     'search_notes',
-    'Search for a keyword or phrase across all markdown files.',
+    'Search for a keyword or phrase across all markdown files. For GitHub files, fetches full content to calculate accurate line numbers and caches it for 3 minutes.',
     {
         query: z.string().describe('The search query or keyword'),
     },
@@ -123,18 +136,61 @@ server.tool(
 // 3. Tool: read_note
 server.tool(
     'read_note',
-    'Read the full content of a specific file.',
+    'Read the content of a file. Always uses pagination with a default of 100 lines. ' +
+    'Use startLine, endLine, or maxLines to control the range. ' +
+    'Note: GitHub repositories have a 100MB file size limit. ' +
+    'MCP transport has a 4MB response size limit - large responses will be truncated. ' +
+    'For GitHub files, uses cached content if available (3-minute TTL) to avoid redundant API calls.',
+    {
+        path: z.string().describe('Relative path to the file'),
+        startLine: z.number().optional().describe('Start line number (1-indexed, default: 1)'),
+        endLine: z.number().optional().describe('End line number (1-indexed)'),
+        maxLines: z.number().optional().describe('Number of lines to read (default: 100, max: 300)'),
+        maxResponseSize: z.number().optional().describe('Maximum response size in bytes (default: 4MB)'),
+    },
+    async ({ path: relativePath, startLine, endLine, maxLines, maxResponseSize }) => {
+        try {
+            const result = await provider.read(relativePath, {
+                startLine,
+                endLine,
+                maxLines,
+                maxResponseSize
+            });
+            return {
+                content: [
+                    {
+                        type: 'text',
+                        text: JSON.stringify(result, null, 2),
+                    },
+                ],
+            };
+        } catch (error) {
+            return {
+                content: [{ type: 'text', text: `Error: ${error instanceof Error ? error.message : String(error)}` }],
+                isError: true,
+            };
+        }
+    }
+);
+
+// 4. Tool: get_file_info
+server.tool(
+    'get_file_info',
+    'Get metadata about a file without reading its content. ' +
+    'Returns file size, line count (for files < 1MB), and other metadata. ' +
+    'Use this to determine file size before reading. ' +
+    'For GitHub files, uses cached content if available (3-minute TTL) to avoid redundant API calls.',
     {
         path: z.string().describe('Relative path to the file'),
     },
     async ({ path: relativePath }) => {
         try {
-            const content = await provider.read(relativePath);
+            const info = await provider.getFileInfo(relativePath);
             return {
                 content: [
                     {
                         type: 'text',
-                        text: content,
+                        text: JSON.stringify(info, null, 2),
                     },
                 ],
             };
