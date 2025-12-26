@@ -25,6 +25,29 @@ You can also mount GitHub repositories as part of your knowledge base.
 
 ---
 
+## Limitations
+
+### MCP Transport
+- **Maximum response size: 4MB** (safe limit for stdio transport)
+- All file reads are paginated by default (100 lines)
+- Maximum 300 lines can be requested in a single read
+- Use `maxLines` or `startLine`/`endLine` to control the amount of data returned
+- Responses are streamed for memory efficiency
+
+### GitHub Repositories
+- **Maximum file size: 100MB** (GitHub API hard limit)
+- Files larger than 100MB cannot be retrieved and will result in an error
+- For files larger than 100MB, consider using Git LFS or alternative storage
+- Line count is only provided for files smaller than 1MB
+
+### Local Filesystem
+- No hard limit on file size
+- Uses streaming for efficient memory usage
+- Only markdown files are supported
+- Line count is only provided for files smaller than 1MB
+
+---
+
 ### 1. Cursor
 1. Go to **Settings** > **General** > **MCP**.
 2. Click **+ Add New MCP Server**.
@@ -118,9 +141,14 @@ Some users (especially in VS Code via Kilo Code or Roo Code) might experience co
 ---
 
 ## Tools Available
-- `list_directory`: Recursively list files to map the knowledge base.
-- `search_notes`: Search for keywords across all markdown content.
-- `read_note`: Retrieve the full content of a specific note.
+
+- **`list_directory`**: Recursively list all files in the allowed directory to understand the project structure. Returns both local files and any mounted GitHub repositories.
+
+- **`search_notes`**: Search for a keyword or phrase across all markdown files. Searches both local files and GitHub repositories. For GitHub files, fetches full content to calculate accurate line numbers and caches it for 3 minutes.
+
+- **`read_note`**: Read the content of a file. Always uses pagination with a default of 100 lines. Use `startLine`, `endLine`, or `maxLines` to control the range. Returns content with metadata including line numbers and file size. For GitHub files, uses cached content if available (3-minute TTL) to avoid redundant API calls.
+
+- **`get_file_info`**: Get metadata about a file without reading its content. Returns file size, line count (for files < 1MB), file type, and last modified date. Use this to determine file size before reading. For GitHub files, uses cached content if available (3-minute TTL) to avoid redundant API calls.
 
 ## Resources
 - [GitHub Repository](https://github.com/kmmuntasir/synapse-mcp-server)

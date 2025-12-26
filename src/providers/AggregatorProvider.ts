@@ -1,4 +1,4 @@
-import { KBProvider, FileSystemEntry, SearchResult } from './interfaces.js';
+import { KBProvider, FileSystemEntry, SearchResult, ReadResult, ReadOptions, FileInfo } from './interfaces.js';
 
 export class AggregatorProvider implements KBProvider {
     private rootProvider: KBProvider;
@@ -80,17 +80,17 @@ export class AggregatorProvider implements KBProvider {
         return entries;
     }
 
-    async read(path: string): Promise<string> {
+    async read(path: string, options?: ReadOptions): Promise<ReadResult> {
         const normalizedPath = path.replace(/^\/+|\/+$/g, '');
 
         for (const [prefix, provider] of this.mounts.entries()) {
             if (normalizedPath.startsWith(prefix + '/')) {
                 const subPath = normalizedPath.slice(prefix.length + 1);
-                return await provider.read(subPath);
+                return await provider.read(subPath, options);
             }
         }
 
-        return await this.rootProvider.read(path);
+        return await this.rootProvider.read(path, options);
     }
 
     async search(query: string): Promise<SearchResult[]> {
@@ -117,5 +117,18 @@ export class AggregatorProvider implements KBProvider {
         }
 
         return allResults;
+    }
+
+    async getFileInfo(path: string): Promise<FileInfo> {
+        const normalizedPath = path.replace(/^\/+|\/+$/g, '');
+
+        for (const [prefix, provider] of this.mounts.entries()) {
+            if (normalizedPath.startsWith(prefix + '/')) {
+                const subPath = normalizedPath.slice(prefix.length + 1);
+                return await provider.getFileInfo(subPath);
+            }
+        }
+
+        return await this.rootProvider.getFileInfo(path);
     }
 }
