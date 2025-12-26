@@ -81,6 +81,42 @@ Add the following to your MCP configuration file (usually `~/.config/gemini-mcp/
 
 ---
 
+## Troubleshooting Connection Issues (Kilo Code / Roo Code)
+Some users (especially in VS Code via Kilo Code or Roo Code) might experience connection timeouts or errors when running Synapse-MCP directly via `npx`. If the server fails to connect, follow these steps to use a local build:
+
+1. **Clone & Build**:
+   ```bash
+   git clone https://github.com/kmmuntasir/synapse-mcp-server.git
+   cd synapse-mcp-server
+   npm install
+   npm run build
+   ```
+2. **Update MCP Configuration**:
+   Instead of using `npx`, point your configuration directly to the local `dist/index.js` file.
+   - **Command**: `node`
+   - **Arguments**: `/absolute/path/to/synapse-mcp-server/dist/index.js`
+   - **Environment Variables**: (Keep your `NOTES_ROOT`, etc.)
+
+    So the final MCP config will look like this:
+    ```json
+    {
+      "mcpServers": {
+        "synapse-mcp": {
+          "command": "node",
+          "args": ["/absolute/path/to/synapse-mcp-server/dist/index.js"],
+          "env": {
+            "NOTES_ROOT": "/home/user/notes",
+            "GITHUB_TOKEN": "your_token",
+            "GITHUB_REPOS": "owner/repo/docs"
+          }
+        }
+      }
+    }
+    ```
+
+
+---
+
 ## Tools Available
 - `list_directory`: Recursively list files to map the knowledge base.
 - `search_notes`: Search for keywords across all markdown content.

@@ -7,10 +7,23 @@ import { GitHubProvider } from './providers/GitHubProvider.js';
 import { AggregatorProvider } from './providers/AggregatorProvider.js';
 import path from 'path';
 import 'dotenv/config';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const versionPath = path.join(__dirname, '..', 'VERSION');
+let version = 'unknown';
+try {
+    version = readFileSync(versionPath, 'utf8').trim();
+} catch (error) {
+    console.error('Warning: Could not read VERSION file:', error);
+}
 
 const server = new McpServer({
     name: 'synapse-mcp-server',
-    version: '0.1.2',
+    version: version,
 });
 
 // Initialize providers

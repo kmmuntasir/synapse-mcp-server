@@ -7,7 +7,8 @@
     "synapse-mcp": "dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "VERSION"
   ],
   "publishConfig": {
     "access": "public"
