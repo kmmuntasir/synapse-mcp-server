@@ -1,5 +1,16 @@
 # Changelog
 
+# [2025-12-26] v0.2.1
+
+## Detailed Changelog
+- Check `./docs/release-notes/2025-12-26-RELEASE_NOTE_v0.2.1.md`
+
+## Added
+- **Dynamic Versioning**: Server now reads version from `VERSION` file at runtime.
+
+## Changed
+- **Documentation**: Added comprehensive troubleshooting guide for connection issues in VS Code-based agents.
+
 # [2025-12-26] v0.2.0
 
 ## Detailed Changelog
