@@ -1,3 +1,17 @@
+# Changelog
+
+# [2025-12-26] v0.2.0
+
+## Detailed Changelog
+- Check `./docs/release-notes/2025-12-26-RELEASE_NOTE_v0.2.0.md`
+
+## Added
+- **GitHub Integration**: Unify local notes with remote GitHub repositories.
+- **Hybrid Storage**: Access remote files using standard MCP tools.
+
+## Changed
+- **Dependency Update**: Migrated to modern TypeScript and Node.js 24 compatibility.
+
 # [2025-12-23] v0.1.2
 
 ## Detailed Changelog
