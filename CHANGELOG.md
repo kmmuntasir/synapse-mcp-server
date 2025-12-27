@@ -1,5 +1,19 @@
 # Changelog
 
+# [2025-12-27] v0.2.2
+
+## Detailed Changelog
+- Check `./docs/release-notes/2025-12-27-RELEASE_NOTE_v0.2.2.md`
+
+## Added
+- **Large File Support**: Intelligent pagination system for reading files exceeding 4MB with configurable line limits.
+- **Search Line Numbers**: Enhanced search functionality returning exact line numbers for precise code navigation.
+
+## Changed
+- **GitHub Caching**: Implemented comprehensive caching strategy for file content, metadata, and search results.
+- **Local File Provider**: Extended with pagination support and improved metadata handling.
+- **GitHub Provider**: Enhanced with caching layer and accurate line number tracking.
+
 # [2025-12-26] v0.2.1
 
 ## Detailed Changelog
