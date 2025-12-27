@@ -1,5 +1,17 @@
 # Changelog
 
+# [2025-12-28] v0.2.3
+
+## Detailed Changelog
+- Check `./docs/release-notes/2025-12-28-RELEASE_NOTE_v0.2.3.md`
+
+## Added
+- **List Mounted Resources Tool**: New tool that returns a JSON array of all mounted local directories and GitHub repositories/paths.
+
+## Changed
+- **GitHub Repository Configuration**: Enhanced `GITHUB_REPOS` environment variable to support multiple separator types (comma, semicolon, colon).
+- **Repository Format Validation**: Added validation and warning messages for invalid GitHub repository formats.
+
 # [2025-12-27] v0.2.2
 
 ## Detailed Changelog

@@ -1,6 +1,6 @@
 {
   "name": "@kmmuntasir/synapse-mcp-server",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Synapse-MCP: A Hybrid Universal Knowledge Base MCP Server",
   "type": "module",
   "bin": {
