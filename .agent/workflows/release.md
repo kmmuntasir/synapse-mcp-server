@@ -13,6 +13,7 @@ Follow these steps to create a new official release of Synapse-MCP. Remember tha
 ### 2. Version Synchronization
 - Update the version in `VERSION` file (no `v` prefix).
 - Update the version in `package.json`.
+- If there is a Project Metadata file in the project, and it contains the version number, update the version in that, too.
 
 // turbo
 - Sync lockfile: `npm install`

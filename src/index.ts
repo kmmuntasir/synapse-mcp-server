@@ -49,7 +49,7 @@ const aggregator = new AggregatorProvider(localProvider);
 
 // GitHub Integration
 const githubToken = process.env.GITHUB_TOKEN;
-const githubRepos = process.env.GITHUB_REPOS ? process.env.GITHUB_REPOS.split(',').map(r => r.trim()) : [];
+const githubRepos = process.env.GITHUB_REPOS ? process.env.GITHUB_REPOS.split(/[,;:]/).map(r => r.trim()) : [];
 
 if (githubRepos.length > 0) {
     if (!githubToken) {
@@ -59,17 +59,20 @@ if (githubRepos.length > 0) {
 
     console.error('GitHub Integration active for repositories:');
     for (const repoStr of githubRepos) {
-        const parts = repoStr.split('/');
-        if (parts.length >= 2) {
-            const owner = parts[0];
-            const repo = parts[1];
-            const basePath = parts.slice(2).join('/');
+        // Handle format: "owner/repo" or "owner/repo/subpath"
+        const slashParts = repoStr.split('/');
+        if (slashParts.length >= 2) {
+            const owner = slashParts[0];
+            const repo = slashParts[1];
+            const basePath = slashParts.slice(2).join('/');
 
             const mountPath = `github/${owner}/${repo}${basePath ? '/' + basePath : ''}`;
             console.error(`  - ${owner}/${repo}${basePath ? ' (path: ' + basePath + ')' : ''} (mounted at ${mountPath})`);
 
             const ghProvider = new GitHubProvider(owner, repo, githubToken, basePath);
             aggregator.mount(mountPath, ghProvider);
+        } else {
+            console.error(`Warning: Invalid GitHub repository format: ${repoStr}. Expected format: owner/repo or owner/repo/subpath`);
         }
     }
     console.error('WARNING: GitHub Search API is limited to 30 requests per minute. Internal throttling is active.');
@@ -191,6 +194,51 @@ server.tool(
                     {
                         type: 'text',
                         text: JSON.stringify(info, null, 2),
+                    },
+                ],
+            };
+        } catch (error) {
+            return {
+                content: [{ type: 'text', text: `Error: ${error instanceof Error ? error.message : String(error)}` }],
+                isError: true,
+            };
+        }
+    }
+);
+
+// 5. Tool: list_mounted_resources
+server.tool(
+    'list_mounted_resources',
+    'List all mounted local directories and GitHub repositories/paths. Returns a JSON array of strings representing the mounted resources.',
+    {},
+    async () => {
+        try {
+            const mountedResources: string[] = [];
+            
+            // Add local directories
+            for (const root of notesRoots) {
+                mountedResources.push(path.resolve(root));
+            }
+            
+            // Add GitHub repositories
+            for (const repoStr of githubRepos) {
+                // Handle format: "owner/repo" or "owner/repo/subpath"
+                const slashParts = repoStr.split('/');
+                if (slashParts.length >= 2) {
+                    const owner = slashParts[0];
+                    const repo = slashParts[1];
+                    const basePath = slashParts.slice(2).join('/');
+                    
+                    const mountPath = `github/${owner}/${repo}${basePath ? '/' + basePath : ''}`;
+                    mountedResources.push(mountPath);
+                }
+            }
+            
+            return {
+                content: [
+                    {
+                        type: 'text',
+                        text: JSON.stringify(mountedResources, null, 2),
                     },
                 ],
             };
