@@ -6,6 +6,16 @@
 
 Synapse-MCP is run directly via `npx`. Configuration is handled via environment variables. Multiple values are always separated by commas.
 
+### ⚠️ Breaking Change: Path Separator
+**As of v0.2.0**, the path separator has changed from OS-specific (`:` on Unix/macOS, `;` on Windows) to **comma (`,`) for all platforms**.
+
+**Migration Guide:**
+- **Before**: `NOTES_ROOT="/home/user/notes1:/home/user/notes2"` (Unix/macOS)
+- **Before**: `NOTES_ROOT="C:/notes1;D:/notes2"` (Windows)
+- **After**: `NOTES_ROOT="/home/user/notes1,/home/user/notes2"` (all platforms)
+
+Please update your configuration to use commas as the separator.
+
 ### GitHub Integration (Remote)
 You can also mount GitHub repositories as part of your knowledge base.
 
