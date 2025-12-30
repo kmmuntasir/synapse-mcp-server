@@ -8,30 +8,11 @@ import {
     STREAMING_THRESHOLD,
     GITHUB_CACHE_TTL
 } from '../config/constants.js';
-
-/**
- * A simple throttler for GitHub Search API (30 requests per minute).
- */
-class GitHubSearchThrottler {
-    private lastRequests: number[] = [];
-    private readonly LIMIT = 30;
-    private readonly WINDOW = 60 * 1000; // 1 minute
-
-    async waitIfNecessary(): Promise<void> {
-        const now = Date.now();
-        this.lastRequests = this.lastRequests.filter(time => now - time < this.WINDOW);
-
-        if (this.lastRequests.length >= this.LIMIT) {
-            const oldest = this.lastRequests[0];
-            const waitTime = this.WINDOW - (now - oldest) + 500; // Add small buffer
-            console.error(`GitHub Search rate limit approaching. Waiting ${Math.ceil(waitTime / 1000)}s...`);
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-            return this.waitIfNecessary(); // Re-check after waiting
-        }
-
-        this.lastRequests.push(Date.now());
-    }
-}
+import { validateReadOptions } from './utils/validation.js';
+import { extractMatches } from './utils/search.js';
+import { GitHubSearchThrottler } from './github/GitHubSearchThrottler.js';
+import { GitHubCache, CachedContent, CachedCommitDate } from './github/GitHubCache.js';
+import { joinPath, removeBasePath } from './github/GitHubPathUtils.js';
 
 const searchThrottler = new GitHubSearchThrottler();
 
@@ -40,25 +21,18 @@ export class GitHubProvider implements KBProvider {
     private owner: string;
     private repo: string;
     private basePath: string;
-    private contentCache = new Map<string, { content: string; timestamp: number }>();
-    private commitDateCache = new Map<string, { date: Date; timestamp: number }>();
-    private readonly CACHE_TTL = GITHUB_CACHE_TTL;
+    private cache: GitHubCache;
 
     constructor(owner: string, repo: string, token: string, basePath: string = '') {
         this.owner = owner;
         this.repo = repo;
         this.octokit = new Octokit({ auth: token });
         this.basePath = basePath.replace(/^\/+|\/+$/g, '');
-    }
-
-    private joinPath(path: string): string {
-        if (!this.basePath) return path;
-        const normalizedPath = path.replace(/^\/+|\/+$/g, '');
-        return normalizedPath ? `${this.basePath}/${normalizedPath}` : this.basePath;
+        this.cache = new GitHubCache();
     }
 
     async list(path: string = ''): Promise<FileSystemEntry[]> {
-        const fullPath = this.joinPath(path);
+        const fullPath = joinPath(this.basePath, path);
         try {
             const { data } = await this.octokit.rest.repos.getContent({
                 owner: this.owner,
@@ -73,9 +47,7 @@ export class GitHubProvider implements KBProvider {
             return data.map(item => ({
                 name: item.name,
                 type: item.type === 'dir' ? 'directory' : 'file',
-                path: item.path.startsWith(this.basePath)
-                    ? item.path.slice(this.basePath.length).replace(/^\/+/, '')
-                    : item.path,
+                path: removeBasePath(item.path, this.basePath),
             }));
         } catch (error) {
             console.error(`GitHub list error (${this.owner}/${this.repo} @ ${fullPath}):`, error);
@@ -84,18 +56,17 @@ export class GitHubProvider implements KBProvider {
     }
 
     async read(path: string, options?: ReadOptions): Promise<ReadResult> {
-        this.validateReadOptions(options);
-        const fullPath = this.joinPath(path);
+        validateReadOptions(options);
+        const fullPath = joinPath(this.basePath, path);
         
         try {
             // Check cache first to avoid redundant API calls
             let content: string;
             let fileSize: number;
             
-            const cached = this.contentCache.get(fullPath);
-            const now = Date.now();
+            const cached = this.cache.getContent(fullPath);
             
-            if (cached && (now - cached.timestamp) < this.CACHE_TTL) {
+            if (cached) {
                 content = cached.content;
                 fileSize = Buffer.byteLength(content, 'utf8');
             } else {
@@ -119,8 +90,8 @@ export class GitHubProvider implements KBProvider {
                 }
 
                 content = data as unknown as string;
-                // Cache the content for future use
-                this.contentCache.set(fullPath, { content, timestamp: now });
+                // Cache content for future use
+                this.cache.setContent(fullPath, content);
             }
             const totalLines = content.split(/\r?\n/).length;
 
@@ -158,46 +129,6 @@ export class GitHubProvider implements KBProvider {
         }
     }
 
-    private validateReadOptions(options?: ReadOptions): void {
-        if (!options) {
-            return;
-        }
-
-        if (options.startLine !== undefined && options.startLine < 1) {
-            throw new Error('startLine must be >= 1');
-        }
-
-        if (options.endLine !== undefined && options.endLine < 1) {
-            throw new Error('endLine must be >= 1');
-        }
-
-        if (options.maxLines !== undefined && options.maxLines < 1) {
-            throw new Error('maxLines must be >= 1');
-        }
-
-        if (options.endLine !== undefined && options.maxLines !== undefined) {
-            throw new Error('Cannot specify both endLine and maxLines');
-        }
-
-        if (options.startLine !== undefined && options.endLine !== undefined && options.endLine < options.startLine) {
-            throw new Error('endLine must be >= startLine');
-        }
-
-        // Enforce maximum requested lines
-        const requestedLines = options.maxLines ?? (options.endLine && options.startLine
-            ? options.endLine - options.startLine + 1
-            : undefined);
-        
-        if (requestedLines !== undefined && requestedLines > MAX_REQUESTED_LINES) {
-            throw new Error(`Cannot request more than ${MAX_REQUESTED_LINES} lines in a single read`);
-        }
-
-        // Validate maxResponseSize
-        if (options.maxResponseSize !== undefined && options.maxResponseSize < 1024) {
-            throw new Error('maxResponseSize must be at least 1KB');
-        }
-    }
-
     private sliceContent(content: string, startLine: number = 1, endLine?: number): string {
         const lines = content.split(/\r?\n/);
         const start = Math.max(0, startLine - 1);
@@ -211,10 +142,9 @@ export class GitHubProvider implements KBProvider {
      * Fetches file content with caching support
      */
     private async getFileContent(path: string): Promise<string> {
-        const cached = this.contentCache.get(path);
-        const now = Date.now();
-
-        if (cached && (now - cached.timestamp) < this.CACHE_TTL) {
+        const cached = this.cache.getContent(path);
+        
+        if (cached) {
             return cached.content;
         }
 
@@ -228,37 +158,9 @@ export class GitHubProvider implements KBProvider {
         });
 
         const content = data as unknown as string;
-        this.contentCache.set(path, { content, timestamp: now });
+        this.cache.setContent(path, content);
 
         return content;
-    }
-
-    /**
-     * Extracts matches with line numbers from file content
-     * Similar to LocalFileSystemProvider.extractMatches()
-     */
-    private extractMatchesWithLineNumbers(
-        content: string,
-        query: string,
-        contextRows: number = 1
-    ): Array<{ line: number; content: string }> {
-        const lines = content.split(/\r?\n/);
-        const matches: Array<{ line: number; content: string }> = [];
-        const lowerQuery = query.toLowerCase();
-
-        lines.forEach((line, index) => {
-            if (line.toLowerCase().includes(lowerQuery)) {
-                const start = Math.max(0, index - contextRows);
-                const end = Math.min(lines.length, index + contextRows + 1);
-                const snippet = lines.slice(start, end).join('\n');
-                matches.push({
-                    line: index + 1, // 1-based index
-                    content: snippet,
-                });
-            }
-        });
-
-        return matches.slice(0, 5); // Limit to 5 matches per file
     }
 
     async search(query: string): Promise<SearchResult[]> {
@@ -282,16 +184,13 @@ export class GitHubProvider implements KBProvider {
             const results: SearchResult[] = [];
 
             for (const item of data.items) {
-                // Remove basePath from the returned path for consistency
-                let relativePath = item.path;
-                if (this.basePath && relativePath.startsWith(this.basePath)) {
-                    relativePath = relativePath.slice(this.basePath.length).replace(/^\/+/, '');
-                }
+                // Remove basePath from returned path for consistency
+                let relativePath = removeBasePath(item.path, this.basePath);
 
                 try {
                     // Fetch file content to calculate line numbers
                     const content = await this.getFileContent(item.path);
-                    const matches = this.extractMatchesWithLineNumbers(content, query);
+                    const matches = extractMatches(content, query);
 
                     results.push({
                         path: relativePath,
@@ -324,16 +223,15 @@ export class GitHubProvider implements KBProvider {
     }
 
     async getFileInfo(path: string): Promise<FileInfo> {
-        const fullPath = this.joinPath(path);
+        const fullPath = joinPath(this.basePath, path);
         try {
             // Check cache first to avoid redundant API calls
             let content: string;
             let fileSize: number;
             
-            const cached = this.contentCache.get(fullPath);
-            const now = Date.now();
+            const cached = this.cache.getContent(fullPath);
             
-            if (cached && (now - cached.timestamp) < this.CACHE_TTL) {
+            if (cached) {
                 content = cached.content;
                 fileSize = Buffer.byteLength(content, 'utf8');
             } else {
@@ -357,26 +255,25 @@ export class GitHubProvider implements KBProvider {
                     );
                 }
 
-                // Cache the content for future use
-                this.contentCache.set(fullPath, { content, timestamp: now });
+                // Cache content for future use
+                this.cache.setContent(fullPath, content);
             }
 
             const extension = fullPath.split('.').pop() || '';
             let lineCount: number | undefined;
 
-            // Count lines for small files (using the already-fetched content)
+            // Count lines for small files (using already-fetched content)
             if (fileSize < STREAMING_THRESHOLD) {
                 lineCount = content.split(/\r?\n/).length;
             }
 
-            // Get the last modified date from the latest commit (with caching)
+            // Get last modified date from latest commit (with caching)
             let lastModified = new Date();
             try {
                 // Check cache first
-                const cachedCommit = this.commitDateCache.get(fullPath);
-                const now = Date.now();
+                const cachedCommit = this.cache.getCommitDate(fullPath);
                 
-                if (cachedCommit && (now - cachedCommit.timestamp) < this.CACHE_TTL) {
+                if (cachedCommit) {
                     lastModified = cachedCommit.date;
                 } else {
                     const { data: commitData } = await this.octokit.rest.repos.getCommit({
@@ -390,8 +287,8 @@ export class GitHubProvider implements KBProvider {
                         commitData.commit.author?.date ||
                         Date.now()
                     );
-                    // Cache the commit date
-                    this.commitDateCache.set(fullPath, { date: lastModified, timestamp: now });
+                    // Cache commit date
+                    this.cache.setCommitDate(fullPath, lastModified);
                 }
             } catch (commitError) {
                 console.error(`Could not fetch commit date for ${fullPath}:`, commitError);
