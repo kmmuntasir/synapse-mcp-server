@@ -41,7 +41,7 @@ const server = new McpServer({
 
 // Initialize providers
 const cliRoots = process.argv.slice(2);
-const envRoots = process.env.NOTES_ROOT ? process.env.NOTES_ROOT.split(path.delimiter) : [];
+const envRoots = process.env.NOTES_ROOT ? process.env.NOTES_ROOT.split(',') : [];
 const notesRoots = cliRoots.length > 0 ? cliRoots : (envRoots.length > 0 ? envRoots : [process.cwd()]);
 
 const localProvider = new LocalFileSystemProvider(notesRoots);
@@ -49,7 +49,7 @@ const aggregator = new AggregatorProvider(localProvider);
 
 // GitHub Integration
 const githubToken = process.env.GITHUB_TOKEN;
-const githubRepos = process.env.GITHUB_REPOS ? process.env.GITHUB_REPOS.split(/[,;:]/).map(r => r.trim()) : [];
+const githubRepos = process.env.GITHUB_REPOS ? process.env.GITHUB_REPOS.split(',').map(r => r.trim()) : [];
 
 if (githubRepos.length > 0) {
     if (!githubToken) {

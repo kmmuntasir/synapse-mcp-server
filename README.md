@@ -4,18 +4,12 @@
 
 ## Configuration
 
-Synapse-MCP is run directly via `npx`. Configuration is strictly handled via the `NOTES_ROOT` environment variable.
-
-### Note on Path Separators
-When providing multiple directories, use the appropriate separator for your OS:
-- **Windows**: Semicolon (`;`) → `C:/path1;D:/path2`
-- **Linux/macOS**: Colon (`:`) → `/home/user/path1:/home/user/path2`
-
----
+Synapse-MCP is run directly via `npx`. Configuration is handled via environment variables. Multiple values are always separated by commas.
 
 ### GitHub Integration (Remote)
 You can also mount GitHub repositories as part of your knowledge base.
 
+- **`NOTES_ROOT`**: A comma-separated list of local directory paths (e.g., Obsidian vaults or Markdown folders).
 - **`GITHUB_TOKEN`**: (Mandatory) A Personal Access Token (classic or fine-grained) with `repo` scope.
 - **`GITHUB_REPOS`**: A comma-separated list of `owner/repo` or `owner/repo/path/to/subdir`.
     - To search/access an entire repository: `owner/repo`
@@ -65,7 +59,7 @@ Add this to your `cline_mcp_settings.json`:
     "command": "npx",
     "args": ["-y", "@kmmuntasir/synapse-mcp-server"],
     "env": {
-      "NOTES_ROOT": "/home/user/notes1:/home/user/notes2",
+      "NOTES_ROOT": "/home/user/notes1,/home/user/notes2",
       "GITHUB_TOKEN": "your_token",
       "GITHUB_REPOS": "owner/repo/docs"
     }
@@ -94,7 +88,7 @@ Add the following to your MCP configuration file (usually `~/.config/gemini-mcp/
     "command": "npx",
     "args": ["-y", "@kmmuntasir/synapse-mcp-server"],
     "env": {
-      "NOTES_ROOT": "/home/user/notes",
+      "NOTES_ROOT": "/home/user/notes1,/home/user/notes2",
       "GITHUB_TOKEN": "your_token",
       "GITHUB_REPOS": "owner/repo/docs"
     }
@@ -128,7 +122,7 @@ Some users (especially in VS Code via Kilo Code or Roo Code) might experience co
           "command": "node",
           "args": ["/absolute/path/to/synapse-mcp-server/dist/index.js"],
           "env": {
-            "NOTES_ROOT": "/home/user/notes",
+            "NOTES_ROOT": "/home/user/notes1,/home/user/notes2",
             "GITHUB_TOKEN": "your_token",
             "GITHUB_REPOS": "owner/repo/docs"
           }
